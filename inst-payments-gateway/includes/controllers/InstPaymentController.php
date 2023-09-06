@@ -22,8 +22,8 @@ class InstPaymentController {
         $sdk = new HttpUtil();
         $url = $gateway->domain . '';
         $key = $gateway->api_key . '';
-        $secret = $gateway->api_secret . '';
-        $passphrase = $gateway->api_password . '';
+        $secret = $gateway->api_secret . '';  
+        $api_webhook = $gateway->api_webhook . '';
 
         $customer = array(
             'email' => $order->get_billing_email(),
@@ -59,16 +59,26 @@ class InstPaymentController {
             'amount' => $order->get_total(),
             'cust_order_id' => 'woo' . substr($key, 0 ,5) . date("YmdHis",time()) . $orderId,
             'customer' => $customer,
+            'payment_method' => 'creditcard',
+            'notification_url' => $api_webhook,
 //            'product_info' => $product_info,
 //            'shipping_info' => $shipping_info,
             'return_url' => $order->get_view_order_url(),
             'network' => $payType,
         );
 
-        $post_data = $sdk->formatArray($post_data);
+        //$post_data = $sdk->formatArray($post_data);
 
-        $result = $sdk->post($post_data, $url, $key, $secret, $passphrase);
-//        echo $result . "\n";
+        $requestPath = "/api/v1/payment";
+        $timeStamp = round(microtime(true) * 1000);
+        $signatureData = $key .
+        "&" . $post_data['cust_order_id'] .
+        "&" . $post_data['amount'] .
+        "&" . $post_data['currency'] .
+        "&" . $secret .
+        "&" . $timeStamp;
+        $result = $sdk->post($requestPath, $post_data, $signatureData, $key, $timeStamp);
+        echo $result . "\n";
 
         $result = json_decode($result, true);
         if ( $result['code'] === 0 ) {
