@@ -1,17 +1,14 @@
 <?php
 
-use Inst\Gateways\Inst_Crypto_Gateway;
-use Inst\Gateways\Inst_Gateway;
-use Inst\Gateways\Inst_Mastercard_Gateway;
-use Inst\Gateways\Inst_Visa_Gateway;
+use By\Gateways\By_Gateway;
 
-class InstPaymentController {
+class ByPaymentController {
 
     /**
      * @throws Exception
      */
     public function payment($gateway, $payType) {
-        $orderId = (int)WC()->session->get('inst_order');
+        $orderId = (int)WC()->session->get('beyounger_order');
 //        echo $orderId . "\n";
 
         $order = wc_get_order($orderId);
@@ -23,7 +20,7 @@ class InstPaymentController {
         $url = $gateway->domain . '';
         $key = $gateway->api_key . '';
         $secret = $gateway->api_secret . '';  
-        $api_webhook = $gateway->api_webhook . '';
+        $api_webhook = $gateway->api_webhook . '?wc-api=by_webhook'; //http://127.0.0.1/?wc-api=by_webhook
 
         $customer = array(
             'email' => $order->get_billing_email(),
@@ -37,7 +34,7 @@ class InstPaymentController {
             'zipcode' => $order->get_billing_postcode(),
         );
 
-//        // todo 哪里获取商品信息？
+//        // todo 哪里获取商品信息？ https://stackoverflow.com/questions/39401393/how-to-get-woocommerce-order-details
 //        $product_info = array(
 //            'name' => 'name'
 //        );
@@ -53,6 +50,28 @@ class InstPaymentController {
 //            'zipcode' => $order->get_shipping_postcode(),
 //            'company' => $order->get_shipping_company(),
 //        );
+        $cart_items = [];
+        foreach ($order->get_items() as $item_key => $item ):
+            $item_id = $item->get_id();
+            //$product      = $item->get_product(); // Get the WC_Product object
+            //$product_id   = $item->get_product_id(); // the Product id
+            $item_name    = $item->get_name(); // Name of the product
+            $quantity     = $item->get_quantity();
+            $total        = $item->get_total(); // Line total (discounted)
+            //echo $item . "=====\n";
+            $myitem = array(
+                'id' => $item_id,
+                'name' => $item_name,
+                'quantity' => $quantity,
+                'unitPrice' => array(
+                    'currency' => $order->get_currency(),
+                    'value' => $total
+                ),
+            );
+            array_unshift($cart_items, $myitem);
+        endforeach;
+
+        echo json_encode($cart_items) . "------\n";
 
         $post_data = array(
             'currency' => $order->get_currency(),
@@ -63,6 +82,7 @@ class InstPaymentController {
             'notification_url' => $api_webhook,
 //            'product_info' => $product_info,
 //            'shipping_info' => $shipping_info,
+            'cart_items' => $cart_items,
             'return_url' => $order->get_view_order_url(),
             'network' => $payType,
         );
@@ -77,8 +97,12 @@ class InstPaymentController {
         "&" . $post_data['currency'] .
         "&" . $secret .
         "&" . $timeStamp;
-        $result = $sdk->post($requestPath, $post_data, $signatureData, $key, $timeStamp);
-        echo $result . "\n";
+
+        $result = $sdk->post($url, $requestPath, $post_data, $signatureData, $key, $timeStamp);
+        //echo $post_data['cust_order_id'] . "\n";
+//        $result = '{}';
+//        echo $order->get_data() . "=====\n";
+//        echo json_encode($order). "=====\n";;
 
         $result = json_decode($result, true);
         if ( $result['code'] === 0 ) {
@@ -90,11 +114,11 @@ class InstPaymentController {
             WC()->cart->empty_cart();
 
 //            echo $result['result']['redirect_url'] . "\n";
-            // 重定向，根据配置决定跳转到receipt_page(iframe)还是inst支付页面
+            // 重定向，根据配置决定跳转到receipt_page(iframe)还是支付页面
 //            echo 'iframe?:' . $gateway->iframe . "\n";
             if ($gateway->iframe === 'yes') {
 //                echo 'iframe:' . $result['result']['redirect_url'] . "\n";
-                update_post_meta($orderId, 'inst_url', $result['result']['redirect_url']);
+                update_post_meta($orderId, 'by_url', $result['result']['redirect_url']);
                 return array(
                     'result' => 'success',
                     'redirect' => $order->get_checkout_payment_url(true),
@@ -125,72 +149,19 @@ class InstPaymentController {
         http_response_code(200);
         header('Content-Type: application/json');
 
-        $gateway = new Inst_Gateway;
-        $enabled = $gateway->api_webhook;
-        if ($enabled === 'no') {
-            echo json_encode([
-                'code' => 1,
-                'msg'  => 'REFUSE',
-            ]);
-            die;
-        }
+//        $gateway = new By_Gateway;
+//        $enabled = $gateway->api_webhook;
+//        if ($enabled === 'no') {
+//            echo json_encode([
+//                'code' => 1,
+//                'msg'  => 'REFUSE',
+//            ]);
+//            die;
+//        }
 
         $this->webhook_internal();
     }
 
-    public function webhook_master() { // todo 起一个service去做
-
-        http_response_code(200);
-        header('Content-Type: application/json');
-
-        $gateway = new Inst_Mastercard_Gateway;
-        $enabled = $gateway->api_webhook;
-        if ($enabled === 'no') {
-            echo json_encode([
-                'code' => 1,
-                'msg'  => 'REFUSE',
-            ]);
-            die;
-        }
-
-        $this->webhook_internal();
-    }
-
-    public function webhook_visa() { // todo 起一个service去做
-
-        http_response_code(200);
-        header('Content-Type: application/json');
-
-        $gateway = new Inst_Visa_Gateway;
-        $enabled = $gateway->api_webhook;
-        if ($enabled === 'no') {
-            echo json_encode([
-                'code' => 1,
-                'msg'  => 'REFUSE',
-            ]);
-            die;
-        }
-
-        $this->webhook_internal();
-    }
-
-    public function webhook_crypto() { // todo 起一个service去做
-
-        http_response_code(200);
-        header('Content-Type: application/json');
-
-        $gateway = new Inst_Crypto_Gateway;
-        $enabled = $gateway->api_webhook;
-        if ($enabled === 'no') {
-            echo json_encode([
-                'code' => 1,
-                'msg'  => 'REFUSE',
-            ]);
-            die;
-        }
-
-        $this->webhook_internal();
-    }
 
     private function webhook_internal() {
         http_response_code(200);
@@ -215,13 +186,13 @@ class InstPaymentController {
                     $status = $value['params']['status'];
                     if ($status == 1) { // 成功
                         $order->payment_complete();
-                        $order->add_order_note( 'Payment is completed. (Inst Webhook)', true);
+                        $order->add_order_note( 'Payment is completed. (By Webhook)', true);
                     } elseif ($status == 4) { // 失败
-                        $order->update_status('failed', 'Failed. (Inst Webhook)');
+                        $order->update_status('failed', 'Failed. (By Webhook)');
                     } elseif ($status == 5) { // 取消
-                        $order->update_status('cancelled', 'Cancelled. (Inst Webhook)');
+                        $order->update_status('cancelled', 'Cancelled. (By Webhook)');
                     } elseif ($status == 6) { // 过期
-                        $order->update_status('failed', 'Expired. (Inst Webhook)');
+                        $order->update_status('failed', 'Expired. (By Webhook)');
                     }
                     // todo 其他订单状态可自行添加
                 }

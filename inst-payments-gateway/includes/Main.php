@@ -1,19 +1,13 @@
 <?php
 
-namespace Inst;
+namespace By;
 
-use Inst\Gateways\Inst_Gateway;
-use Inst\Gateways\Inst_Mastercard_Gateway;
-use Inst\Gateways\Inst_Visa_Gateway;
-use Inst\Gateways\Inst_Crypto_Gateway;
-use InstPaymentController;
+use By\Gateways\By_Gateway;
+use ByPaymentController;
 
 class Main
 {
-    const ROUTE_WEBHOOK = 'inst_webhook';
-    const ROUTE_MASTERCARD_WEBHOOK = 'inst_mastercard_webhook';
-    const ROUTE_VISA_WEBHOOK = 'inst_visa_webhook';
-    const ROUTE_CRYPTO_WEBHOOK = 'inst_crypto_webhook';
+    const ROUTE_WEBHOOK = 'by_webhook';
 
     public static $instance;
     public static function getInstance()
@@ -32,10 +26,7 @@ class Main
     public function registerEvents()
     {
         add_filter('woocommerce_payment_gateways', [$this, 'addPaymentGateways']);
-        add_action('woocommerce_api_' . self::ROUTE_WEBHOOK, [new InstPaymentController, 'webhook']);
-        add_action('woocommerce_api_' . self::ROUTE_MASTERCARD_WEBHOOK, [new InstPaymentController, 'webhook_master']);
-        add_action('woocommerce_api_' . self::ROUTE_VISA_WEBHOOK, [new InstPaymentController, 'webhook_visa']);
-        add_action('woocommerce_api_' . self::ROUTE_CRYPTO_WEBHOOK, [new InstPaymentController, 'webhook_crypto']);
+        add_action('woocommerce_api_' . self::ROUTE_WEBHOOK, [new ByPaymentController, 'webhook']);
     }
 
     /**
@@ -43,10 +34,7 @@ class Main
      */
     public function addPaymentGateways($gateways)
     {
-        $gateways[] = Inst_Gateway::class;
-        $gateways[] = Inst_Mastercard_Gateway::class;
-        $gateways[] = Inst_Visa_Gateway::class;
-        $gateways[] = Inst_CRYPTO_Gateway::class;
+        $gateways[] = By_Gateway::class;
         return $gateways;
     }
 }
