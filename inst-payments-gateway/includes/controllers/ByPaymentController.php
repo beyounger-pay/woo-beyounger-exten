@@ -71,8 +71,6 @@ class ByPaymentController {
             array_unshift($cart_items, $myitem);
         endforeach;
 
-        echo json_encode($cart_items) . "------\n";
-
         $post_data = array(
             'currency' => $order->get_currency(),
             'amount' => $order->get_total(),
@@ -85,6 +83,7 @@ class ByPaymentController {
             'cart_items' => $cart_items,
             'return_url' => $order->get_view_order_url(),
             'network' => $payType,
+            'memo' => $order->get_id(),
         );
 
         //$post_data = $sdk->formatArray($post_data);
@@ -103,6 +102,7 @@ class ByPaymentController {
 //        $result = '{}';
 //        echo $order->get_data() . "=====\n";
 //        echo json_encode($order). "=====\n";;
+        echo $order->get_id() . "++++++++\n";
 
         $result = json_decode($result, true);
         if ( $result['code'] === 0 ) {
@@ -172,6 +172,7 @@ class ByPaymentController {
 
         if ($result) { //check succeed
             $tmpData = strval(file_get_contents("php://input"));
+            echo "这是报错关键-" . $tmpData . "-这是报错关键";
             $dataArray = json_decode($tmpData, true);
 
             if (strcmp($dataArray['action'], 'order_result') == 0) {
