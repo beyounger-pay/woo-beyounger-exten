@@ -172,31 +172,28 @@ class ByPaymentController {
 
         if ($result) { //check succeed
             $tmpData = strval(file_get_contents("php://input"));
-            echo "这是报错关键-" . $tmpData . "-这是报错关键";
             $dataArray = json_decode($tmpData, true);
-
             if (strcmp($dataArray['action'], 'order_result') == 0) {
-                foreach ($dataArray['events'] as $val) {
-                    $value = json_decode($val, true);
-                    $order_id = substr($value['params']['cust_order_id'], 25);
-                    $order = wc_get_order($order_id);
-                    if (empty($order)) {
-                        continue;
-                    }
 
-                    $status = $value['params']['status'];
-                    if ($status == 1) { // 成功
-                        $order->payment_complete();
-                        $order->add_order_note( 'Payment is completed. (By Webhook)', true);
-                    } elseif ($status == 4) { // 失败
-                        $order->update_status('failed', 'Failed. (By Webhook)');
-                    } elseif ($status == 5) { // 取消
-                        $order->update_status('cancelled', 'Cancelled. (By Webhook)');
-                    } elseif ($status == 6) { // 过期
-                        $order->update_status('failed', 'Expired. (By Webhook)');
-                    }
-                    // todo 其他订单状态可自行添加
+                $event = $dataArray['event'];
+                $order_id = $event['cust_order_id'];
+                $order = wc_get_order($order_id);
+                if (empty($order)) {
+                    return;
                 }
+                $status = $event['status'];
+                if ($status == 1) { // 成功
+                    $order->payment_complete();
+                    $order->add_order_note( 'Payment is completed. (By Webhook)', true);
+                    $order->update_status('completed', 'completed. (By Webhook)');
+                } elseif ($status == 4) { // 失败
+                    $order->update_status('failed', 'Failed. (By Webhook)');
+                } elseif ($status == 5) { // 取消
+                    $order->update_status('cancelled', 'Cancelled. (By Webhook)');
+                } elseif ($status == 6) { // 过期
+                    $order->update_status('failed', 'Expired. (By Webhook)');
+                }
+
             } // todo 是否需要接收其他推送action？
             echo json_encode([
                 'code' => 0,
