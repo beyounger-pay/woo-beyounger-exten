@@ -176,7 +176,7 @@ class ByPaymentController {
             if (strcmp($dataArray['action'], 'order_result') == 0) {
 
                 $event = $dataArray['event'];
-                $order_id = $event['cust_order_id'];
+                $order_id = substr($event['cust_order_id'],22);
                 $order = wc_get_order($order_id);
                 if (empty($order)) {
                     return;
