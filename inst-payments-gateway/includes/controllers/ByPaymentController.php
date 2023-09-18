@@ -74,7 +74,7 @@ class ByPaymentController {
         $home_url = home_url();
         $home_url = rtrim(str_replace('https://','',str_replace('http://','',$home_url)));
         preg_match('@^(?:https://)?([^/]+)@i',str_replace('www.','',$home_url), $matches);
-        $memo = $matches[1] . '-' . $order->get_id() . "\n";
+        $memo = $matches[1] . '-' . $order->get_id();
         echo '拼接memo:' . $memo ."\n";
 
 
