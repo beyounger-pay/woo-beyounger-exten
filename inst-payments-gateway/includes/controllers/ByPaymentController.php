@@ -71,6 +71,13 @@ class ByPaymentController {
             array_unshift($cart_items, $myitem);
         endforeach;
 
+        $home_url = home_url();
+        $home_url = rtrim(str_replace('https://','',str_replace('http://','',$home_url)));
+        preg_match('@^(?:https://)?([^/]+)@i',str_replace('www.','',$home_url), $matches);
+        $memo = $matches[1] . '-' . $order->get_id() . "\n";
+        echo '拼接memo:' . $memo ."\n";
+
+
         $post_data = array(
             'currency' => $order->get_currency(),
             'amount' => $order->get_total(),
@@ -83,7 +90,7 @@ class ByPaymentController {
             'cart_items' => $cart_items,
             'return_url' => $order->get_view_order_url(),
             'network' => $payType,
-            'memo' => $order->get_id(),
+            'memo' => $memo,
         );
 
         //$post_data = $sdk->formatArray($post_data);
@@ -183,9 +190,9 @@ class ByPaymentController {
                 }
                 $status = $event['status'];
                 if ($status == 1) { // 成功
-                    $order->payment_complete();
-                    $order->add_order_note( 'Payment is completed. (By Webhook)', true);
-                    $order->update_status('completed', 'completed. (By Webhook)');
+                    //$order->payment_complete();
+                    //$order->add_order_note( 'Payment is completed. (By Webhook)', true);
+                    $order->update_status('processing', 'processing. (By Webhook)');
                 } elseif ($status == 4) { // 失败
                     $order->update_status('failed', 'Failed. (By Webhook)');
                 } elseif ($status == 5) { // 取消
